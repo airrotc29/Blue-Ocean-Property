@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>㈜블루오션자산관리 입주지원센터</title>
+<meta name="description" content="㈜블루오션자산관리 입주지원센터 - 분양형 호텔 계약관리 · 장기 숙박객 입퇴실관리 · 입주지원 민원응대 · 하자 접수관리">
+<meta name="theme-color" content="#1f6f78">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <button id="menuToggle" class="menu-toggle" aria-label="메뉴 열기">☰</button>
+    <div class="brand">
+      <img src="./assets/logo.png" alt="㈜블루오션자산관리" class="brand-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
+      <span class="brand-fallback" style="display:none;">🏨</span>
+      <span class="brand-text"><strong>㈜블루오션자산관리</strong><small>입주지원센터</small></span>
+    </div>
+    <nav id="nav"></nav>
+  </header>
+  <main id="content"></main>
+</div>
+<div id="modalRoot"></div>
+<div id="toastRoot"></div>
+
+<script src="./js/utils.js"></script>
+<script src="./js/store.js"></script>
+<script src="./js/modules.js"></script>
+<script src="./js/crud.js"></script>
+<script src="./js/dashboard.js"></script>
+<script src="./js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "입주지원센터 관리 프로그램",
+  "short_name": "입주지원센터",
+  "description": "분양형 호텔 계약관리 · 장기 숙박객 입퇴실관리 · 입주지원 민원응대 · 하자 접수관리",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f6f8",
+  "theme_color": "#1f6f78",
+  "lang": "ko-KR",
+  "icons": [
+    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
