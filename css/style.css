@@ -199,11 +199,11 @@ main#content {
 .hero-sub { margin: 0; font-size: 13.5px; color: rgba(245, 242, 234, 0.85); letter-spacing: 0.02em; }
 
 .btn-report {
-  background: linear-gradient(135deg, var(--gold), var(--gold-light));
-  color: #1a2050;
+  background: linear-gradient(135deg, var(--primary-dark), #37418f);
+  color: #ffffff;
   border: none;
 }
-.btn-report:hover { filter: brightness(1.06); box-shadow: 0 0 0 3px rgba(212, 185, 106, 0.35); }
+.btn-report:hover { filter: brightness(1.12); box-shadow: 0 0 0 3px rgba(38, 45, 110, 0.25); }
 
 .topbar-report { padding: 8px 14px; font-size: 13px; flex-shrink: 0; }
 @media (max-width: 760px) {
