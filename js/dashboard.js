@@ -11,11 +11,6 @@ function renderDashboard(container, crudViews) {
     });
     const total = items.length;
     const states = STATE_ORDER.filter((s) => counts[s]);
-
-    const segs = states.map((s) => `
-      <div class="dist-seg" style="flex-grow:${counts[s]};background:${STATE_COLORS[s]}"
-        data-tip="${escapeHtml(labels[s] || s)} · ${counts[s]}건" data-route="${view.config.key}" data-state="${s}"></div>`).join('');
-
     const maxCount = Math.max(1, ...states.map((s) => counts[s]));
     const legend = states.map((s) => `
       <li class="dl-row" data-route="${view.config.key}" data-state="${s}" title="클릭하면 해당 현황만 모아 봅니다">
@@ -32,15 +27,39 @@ function renderDashboard(container, crudViews) {
           <span class="dash-card-title">${escapeHtml(view.config.shortTitle)}</span>
           <span class="dash-card-total">${total}건</span>
         </div>
-        <div class="dist-bar">${total ? segs : ''}</div>
         ${total ? `<ul class="dist-legend">${legend}</ul>` : '<p class="dist-empty">등록된 항목이 없습니다.</p>'}
       </div>`;
   }).join('');
 
-  /* 오늘 업무 호실판: 오늘 입실/퇴실, 연체, 미처리 민원·하자가 있는 호실만 표시 */
-  const roomStates = buildRoomBoard(crudViews).filter((r) => r.state !== 'gray');
-  const roomTiles = roomStates.map((r) => `
-    <div class="room-tile" style="background:${STATE_COLORS[r.state]}" data-tip="${escapeHtml(r.tip)}" data-room="${escapeHtml(r.no)}">${escapeHtml(r.no)}</div>`).join('');
+  /* 오늘 업무 호실판: 카테고리(모듈)별로 섹션을 나눠 호실 타일을 정렬 표시 */
+  const roomStates = buildRoomBoard(crudViews).filter((r) => r.tasks.length > 0);
+  const stateRank = { blue: 1, yellow: 2, red: 3 };
+  const sectionData = {};
+  crudViews.forEach((view) => {
+    const key = view.config.key;
+    sectionData[key] = roomStates
+      .map((r) => {
+        const tasks = r.tasks.filter((t) => t.key === key);
+        if (!tasks.length) return null;
+        const state = tasks.reduce((s, t) => (stateRank[t.state] > stateRank[s] ? t.state : s), tasks[0].state);
+        return { no: r.no, tasks, state };
+      })
+      .filter(Boolean);
+  });
+  const sectionsHtml = crudViews.map((view) => {
+    const key = view.config.key;
+    const rooms = sectionData[key];
+    if (!rooms.length) return '';
+    const tiles = rooms.map((rm) => `
+      <div class="room-tile" style="background:${STATE_COLORS[rm.state]}"
+        data-tip="${escapeHtml(`${rm.no}호 · ${summarizeTasks(rm.tasks)}`)}"
+        data-key="${key}" data-room="${escapeHtml(rm.no)}">${escapeHtml(rm.no)}</div>`).join('');
+    return `
+      <div class="room-section">
+        <div class="room-section-title">${view.config.icon} ${escapeHtml(view.config.shortTitle)}<span class="room-section-count">${rooms.length}</span></div>
+        <div class="room-grid">${tiles}</div>
+      </div>`;
+  }).join('');
   const roomLegend = [
     ['red', '연체/긴급'],
     ['yellow', '오늘 퇴실·처리중'],
@@ -84,7 +103,7 @@ function renderDashboard(container, crudViews) {
       <div class="dash-panel">
         <h3>오늘 업무가 있는 호실</h3>
         <div class="room-legend">${roomLegend}</div>
-        ${roomStates.length ? `<div class="room-grid">${roomTiles}</div>` : '<p class="dist-empty">오늘 처리할 업무가 있는 호실이 없습니다. 🎉</p>'}
+        ${roomStates.length ? sectionsHtml : '<p class="dist-empty">오늘 처리할 업무가 있는 호실이 없습니다. 🎉</p>'}
       </div>
       <div class="dash-panel">
         <h3>최근 등록/수정</h3>
@@ -111,15 +130,12 @@ function renderDashboard(container, crudViews) {
 
   container.querySelector('#dailyReportBtn').addEventListener('click', () => openDailyReport(crudViews));
 
-  /* 호실 타일 클릭 → 업무 1건이면 바로 그 건 상세로, 여러 건이면 선택 모달 */
+  /* 호실 타일 클릭 → 해당 카테고리 업무가 1건이면 바로 상세 팝업, 여러 건이면 선택 모달 */
   container.querySelectorAll('.room-tile').forEach((el) => {
     el.addEventListener('click', () => {
-      const r = roomStates.find((x) => x.no === el.dataset.room);
-      if (!r || r.tasks.length === 0) {
-        sessionStorage.setItem('rsc_search_stays', el.dataset.room);
-        window.location.hash = '#stays';
-        return;
-      }
+      const rooms = sectionData[el.dataset.key] || [];
+      const r = rooms.find((x) => x.no === el.dataset.room);
+      if (!r || r.tasks.length === 0) return;
       if (r.tasks.length === 1) {
         openRoomTaskDetail(r.tasks[0], null);
         return;
@@ -131,7 +147,17 @@ function renderDashboard(container, crudViews) {
   attachVizTips(container);
 }
 
-/** 모든 모듈의 호실번호를 모아 호실별 상태(red > yellow > blue > gray)와 업무 목록을 계산 */
+/** 업무 목록을 짧은 요약 문구로: 같은 문구는 ×N 으로 묶고 최대 3가지만 표시 */
+function summarizeTasks(tasks) {
+  const counted = new Map();
+  tasks.forEach((t) => counted.set(t.text, (counted.get(t.text) || 0) + 1));
+  const parts = [...counted.entries()].map(([n, c]) => (c > 1 ? `${n} ×${c}` : n));
+  const shown = parts.slice(0, 3);
+  const more = parts.length - shown.length;
+  return parts.length ? shown.join(' · ') + (more > 0 ? ` 외 ${more}건` : '') : '업무 없음';
+}
+
+/** 모든 모듈의 호실번호를 모아 호실별 오늘 업무 목록(모듈 키·건 id·상태 포함)을 계산 */
 function buildRoomBoard(crudViews) {
   const byKey = {};
   crudViews.forEach((v) => { byKey[v.config.key] = v; });
@@ -139,21 +165,19 @@ function buildRoomBoard(crudViews) {
   const room = (no) => {
     const k = String(no || '').trim();
     if (!k) return null;
-    if (!rooms.has(k)) rooms.set(k, { no: k, tasks: [], state: 'gray' });
+    if (!rooms.has(k)) rooms.set(k, { no: k, tasks: [] });
     return rooms.get(k);
   };
-  const lift = (r, s) => {
-    const rank = { gray: 0, blue: 1, yellow: 2, red: 3 };
-    if (rank[s] > rank[r.state]) r.state = s;
-  };
-  /* 업무 항목: 클릭 시 해당 모듈의 그 건 상세로 이동할 수 있게 모듈 키와 id 를 함께 기록 */
-  const task = (r, key, it, text) => r.tasks.push({ key, id: it.id, icon: byKey[key].config.icon, text });
+  /* 업무 항목: 클릭 시 해당 건 상세를 열 수 있게 모듈 키/id 와 심각도 상태를 함께 기록 */
+  const task = (r, key, it, text, state) => r.tasks.push({ key, id: it.id, icon: byKey[key].config.icon, text, state });
 
   (byKey.contracts ? byKey.contracts.store.getAll() : []).forEach((it) => {
     const r = room(it.unitNo);
     if (!r) return;
     const d = daysDiff(it.endDate);
-    if (it.status !== '해지' && d !== null && d < 0) task(r, 'contracts', it, `계약 만료 ${Math.abs(d)}일 경과`);
+    if (it.status === '해지') return;
+    if (d !== null && d < 0) { task(r, 'contracts', it, `계약 만료 ${Math.abs(d)}일 경과`, 'red'); return; }
+    if (d === 0) task(r, 'contracts', it, '계약 오늘 만료', 'yellow');
   });
 
   (byKey.stays ? byKey.stays.store.getAll() : []).forEach((it) => {
@@ -163,10 +187,10 @@ function buildRoomBoard(crudViews) {
     const dIn = daysDiff(it.checkInDate);
     const dOut = daysDiff(it.expectedCheckOutDate);
     const guest = it.guestName ? `(${it.guestName})` : '';
-    if (dIn === 0) { lift(r, 'blue'); task(r, 'stays', it, `오늘 입실예정${guest}`); return; }
+    if (dIn === 0) { task(r, 'stays', it, `오늘 입실예정${guest}`, 'blue'); return; }
     if (dIn !== null && dIn > 0) return; /* 향후 입실 예정: 오늘 업무 아님 */
-    if (dOut !== null && dOut < 0) { lift(r, 'red'); task(r, 'stays', it, `퇴실 연체 ${Math.abs(dOut)}일${guest}`); return; }
-    if (dOut === 0) { lift(r, 'yellow'); task(r, 'stays', it, `오늘 퇴실예정${guest}`); return; }
+    if (dOut !== null && dOut < 0) { task(r, 'stays', it, `퇴실 연체 ${Math.abs(dOut)}일${guest}`, 'red'); return; }
+    if (dOut === 0) { task(r, 'stays', it, `오늘 퇴실예정${guest}`, 'yellow'); return; }
     /* 단순 재실중: 오늘 처리할 업무가 아니므로 표시하지 않음 */
   });
 
@@ -174,30 +198,19 @@ function buildRoomBoard(crudViews) {
     const r = room(it.unitNo);
     if (!r) return;
     if (it.status === '완료' || it.status === '보류') return;
-    lift(r, badgeStateOf(byKey.complaints.config, it) === 'red' ? 'red' : 'yellow');
-    task(r, 'complaints', it, `민원 ${it.status || '접수'}${it.title ? `: ${it.title}` : ''}`);
+    task(r, 'complaints', it, `민원 ${it.status || '접수'}${it.title ? `: ${it.title}` : ''}`,
+      badgeStateOf(byKey.complaints.config, it) === 'red' ? 'red' : 'yellow');
   });
 
   (byKey.defects ? byKey.defects.store.getAll() : []).forEach((it) => {
     const r = room(it.unitNo);
     if (!r) return;
     if (it.status === '완료' || it.status === '보류') return;
-    lift(r, badgeStateOf(byKey.defects.config, it) === 'red' ? 'red' : 'yellow');
-    task(r, 'defects', it, `하자 ${it.status || '접수'}${it.content ? `: ${it.content}` : ''}`);
+    task(r, 'defects', it, `하자 ${it.status || '접수'}${it.content ? `: ${it.content}` : ''}`,
+      badgeStateOf(byKey.defects.config, it) === 'red' ? 'red' : 'yellow');
   });
 
-  return [...rooms.values()]
-    .map((r) => {
-      /* 같은 문구는 하나로 묶고(×N), 최대 3가지만 표시해 툴팁을 짧게 유지 */
-      const counted = new Map();
-      r.tasks.forEach((t) => counted.set(t.text, (counted.get(t.text) || 0) + 1));
-      const parts = [...counted.entries()].map(([n, c]) => (c > 1 ? `${n} ×${c}` : n));
-      const shown = parts.slice(0, 3);
-      const more = parts.length - shown.length;
-      const summary = parts.length ? shown.join(' · ') + (more > 0 ? ` 외 ${more}건` : '') : '공실/특이사항 없음';
-      return { ...r, tip: `${r.no}호 · ${summary}` };
-    })
-    .sort((a, b) => a.no.localeCompare(b.no, 'ko', { numeric: true }));
+  return [...rooms.values()].sort((a, b) => a.no.localeCompare(b.no, 'ko', { numeric: true }));
 }
 
 /** 업무 건의 상세 내용을 대시보드 위 팝업으로 표시 (페이지 이동 없음) */

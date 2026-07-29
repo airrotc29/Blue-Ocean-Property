@@ -384,18 +384,7 @@ main#content {
 .stat-danger { background: var(--red-bg); }
 .stat-danger .stat-value { color: var(--red); }
 
-/* ── 현황 분포 차트 (스택 바 + 범례) ─────── */
-.dist-bar {
-  display: flex;
-  gap: 2px; /* 세그먼트 사이 2px 서피스 간격 */
-  height: 14px;
-  border-radius: 7px;
-  overflow: hidden;
-  background: var(--gray-bg);
-  margin-bottom: 12px;
-}
-.dist-seg { min-width: 6px; cursor: pointer; }
-
+/* ── 현황 분포 차트 (상태별 막대 + 건수) ─── */
 .dist-legend { list-style: none; margin: 0; padding: 0; }
 .dl-row {
   display: flex;
@@ -470,6 +459,27 @@ main#content {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
   gap: 8px;
+}
+
+.room-section { margin-bottom: 16px; }
+.room-section:last-child { margin-bottom: 0; }
+.room-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 8px;
+  white-space: nowrap;
+}
+.room-section-count {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--gold);
+  background: var(--gold-bg);
+  border-radius: 999px;
+  padding: 1px 8px;
 }
 .room-tile {
   padding: 12px 4px;
