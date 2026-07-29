@@ -51,7 +51,7 @@ function renderDashboard(container, crudViews) {
     const rooms = sectionData[key];
     if (!rooms.length) return '';
     const tiles = rooms.map((rm) => `
-      <div class="room-tile" style="background:${STATE_COLORS[rm.state]}"
+      <div class="room-tile"
         data-tip="${escapeHtml(`${rm.no}호 · ${summarizeTasks(rm.tasks)}`)}"
         data-key="${key}" data-room="${escapeHtml(rm.no)}">${escapeHtml(rm.no)}</div>`).join('');
     return `
@@ -60,11 +60,6 @@ function renderDashboard(container, crudViews) {
         <div class="room-grid">${tiles}</div>
       </div>`;
   }).join('');
-  const roomLegend = [
-    ['red', '연체/긴급'],
-    ['yellow', '오늘 퇴실·처리중'],
-    ['blue', '오늘 입실예정'],
-  ].map(([s, label]) => `<span class="room-legend-item"><span class="dl-swatch" style="background:${STATE_COLORS[s]}"></span>${label}</span>`).join('');
 
   const recent = crudViews.flatMap((view) => view.store.getAll().map((it) => ({
     module: view.config,
@@ -102,7 +97,6 @@ function renderDashboard(container, crudViews) {
     <div class="dash-bottom">
       <div class="dash-panel">
         <h3>오늘 업무가 있는 호실</h3>
-        <div class="room-legend">${roomLegend}</div>
         ${roomStates.length ? sectionsHtml : '<p class="dist-empty">오늘 처리할 업무가 있는 호실이 없습니다. 🎉</p>'}
       </div>
       <div class="dash-panel">
