@@ -1,10 +1,11 @@
-const CACHE_NAME = 'rsc-app-v24';
+const CACHE_NAME = 'rsc-app-v25';
 const ASSETS = [
   './',
   './index.html',
   './css/style.css',
   './js/utils.js',
   './js/store.js',
+  './js/sync.js',
   './js/modules.js',
   './js/crud.js',
   './js/dashboard.js',
@@ -30,6 +31,8 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  /* 동기화 API 요청은 캐시하지 않는다 (항상 최신 데이터 필요) */
+  if (event.request.url.includes('api.github.com')) return;
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached;

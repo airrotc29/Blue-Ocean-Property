@@ -604,6 +604,26 @@ main#content {
 .settings-card p { margin: 0 0 12px; color: var(--text-muted); font-size: 13px; line-height: 1.55; }
 .settings-card input[type="file"] { font-size: 13px; display: block; margin-bottom: 10px; max-width: 100%; }
 
+/* 클라우드 동기화 카드 */
+.sync-card { grid-column: 1 / -1; }
+.sync-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; margin-bottom: 10px; }
+.sync-form input {
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #fbfaf7;
+  color: var(--text);
+  font-size: 13.5px;
+  font-family: inherit;
+}
+.sync-form input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(176, 141, 62, 0.15); }
+.sync-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.sync-status { margin: 6px 0 0; font-size: 12.5px; color: var(--text-muted); }
+.sync-help { margin-top: 10px; font-size: 13px; }
+.sync-help summary { cursor: pointer; color: var(--primary); font-weight: 600; }
+.sync-help ol { margin: 8px 0 0; padding-left: 20px; line-height: 1.7; color: var(--text-muted); }
+.sync-help code { background: var(--gray-bg); padding: 1px 6px; border-radius: 5px; }
+
 /* ── 모달/폼 ─────────────────────────────── */
 .modal-backdrop {
   position: fixed;

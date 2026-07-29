@@ -15,8 +15,13 @@ class Store {
     }
   }
 
-  saveAll(list) {
+  saveAll(list, opts) {
     localStorage.setItem(this.key, JSON.stringify(list));
+    /* 동기화용: 로컬 수정 시각을 남기고 자동 업로드 예약 (클라우드에서 받은 데이터는 silent) */
+    if (!(opts && opts.silent)) {
+      localStorage.setItem('rsc_last_modified', nowISO());
+      if (typeof scheduleSyncPush === 'function') scheduleSyncPush();
+    }
   }
 
   get(id) {

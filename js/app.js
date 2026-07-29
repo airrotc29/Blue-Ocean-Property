@@ -44,6 +44,32 @@ function renderSettings(container) {
       <p class="view-desc">모든 데이터는 이 브라우저에만 저장됩니다. 기기를 바꾸거나 브라우저 데이터를 지우면 사라지므로 주기적으로 백업하세요.</p>
     </div>
     <div class="settings-grid">
+      <div class="settings-card sync-card">
+        <h3>☁️ 클라우드 동기화 (기기 간 공유)</h3>
+        <p>비공개 GitHub 저장소에 데이터를 저장해 사무실 PC와 휴대폰이 <strong>같은 데이터</strong>를 봅니다. 앱을 열 때 자동으로 받아오고, 수정하면 몇 초 뒤 자동으로 올라갑니다.</p>
+        <div class="sync-form">
+          <input type="text" id="syncOwner" placeholder="GitHub 아이디 (예: airrotc29)" autocomplete="off">
+          <input type="text" id="syncRepo" placeholder="비공개 저장소 이름 (예: blue-ocean-data)" autocomplete="off">
+          <input type="password" id="syncToken" placeholder="액세스 토큰 (ghp_... 또는 github_pat_...)" autocomplete="off">
+        </div>
+        <div class="sync-actions">
+          <button class="btn btn-primary" id="syncSaveBtn">저장·연결 확인</button>
+          <button class="btn btn-secondary" id="syncPushBtn">지금 올리기</button>
+          <button class="btn btn-secondary" id="syncPullBtn">지금 받기</button>
+          <button class="btn btn-danger" id="syncClearBtn">연결 해제</button>
+        </div>
+        <p class="sync-status" id="syncStatus"></p>
+        <details class="sync-help">
+          <summary>처음 설정하는 방법 (1회만)</summary>
+          <ol>
+            <li>github.com 에 로그인 → 우측 상단 + → <strong>New repository</strong> → 이름 예: <code>blue-ocean-data</code>, 반드시 <strong>Private</strong> 선택 후 생성</li>
+            <li>GitHub Settings → Developer settings → <strong>Personal access tokens → Fine-grained tokens → Generate new token</strong></li>
+            <li>Repository access 에서 방금 만든 저장소만 선택, Permissions 에서 <strong>Contents: Read and write</strong> 선택 후 생성</li>
+            <li>생성된 토큰을 복사해 위 칸에 붙여넣고 "저장·연결 확인" → "지금 올리기"</li>
+            <li>다른 기기에서도 같은 값을 입력하면 연결 완료</li>
+          </ol>
+        </details>
+      </div>
       <div class="settings-card">
         <h3>대시보드 배경 사진</h3>
         <p>대시보드 상단 남색 배너의 배경으로 표시할 사진(호텔 전경 등)을 업로드합니다.</p>
@@ -78,6 +104,79 @@ function renderSettings(container) {
       </div>
     </div>
   `;
+
+  /* 클라우드 동기화 카드 */
+  const cfg0 = getSyncConfig();
+  if (cfg0) {
+    container.querySelector('#syncOwner').value = cfg0.owner;
+    container.querySelector('#syncRepo').value = cfg0.repo;
+    container.querySelector('#syncToken').value = cfg0.token;
+  }
+  const statusEl = container.querySelector('#syncStatus');
+  statusEl.textContent = cfg0
+    ? (localStorage.getItem('rsc_sync_status') || '연결됨')
+    : '아직 연결되지 않았습니다. 아래 안내에 따라 설정해주세요.';
+
+  container.querySelector('#syncSaveBtn').addEventListener('click', async () => {
+    const cfg = {
+      owner: container.querySelector('#syncOwner').value.trim(),
+      repo: container.querySelector('#syncRepo').value.trim(),
+      token: container.querySelector('#syncToken').value.trim(),
+    };
+    if (!cfg.owner || !cfg.repo || !cfg.token) {
+      showToast('아이디, 저장소 이름, 토큰을 모두 입력해주세요.', 'error');
+      return;
+    }
+    statusEl.textContent = '연결 확인 중...';
+    const result = await syncTestConnection(cfg);
+    if (result !== true) {
+      statusEl.textContent = result;
+      showToast('연결에 실패했습니다. 안내를 확인해주세요.', 'error');
+      return;
+    }
+    saveSyncConfig(cfg);
+    setSyncStatusText('연결됨 — "지금 올리기" 또는 "지금 받기"로 시작하세요.');
+    showToast('클라우드 동기화가 연결되었습니다.');
+  });
+
+  container.querySelector('#syncPushBtn').addEventListener('click', async () => {
+    if (!getSyncConfig()) { showToast('먼저 저장·연결 확인을 해주세요.', 'error'); return; }
+    statusEl.textContent = '올리는 중...';
+    try {
+      await syncPush();
+      showToast('클라우드에 올렸습니다.');
+    } catch (e) {
+      console.error(e);
+      setSyncStatusText('업로드 실패 — 토큰 권한(Contents: Read and write)을 확인해주세요.');
+      showToast('업로드에 실패했습니다.', 'error');
+    }
+  });
+
+  container.querySelector('#syncPullBtn').addEventListener('click', async () => {
+    if (!getSyncConfig()) { showToast('먼저 저장·연결 확인을 해주세요.', 'error'); return; }
+    statusEl.textContent = '받는 중...';
+    try {
+      const changed = await syncPull();
+      if (changed) {
+        showToast('클라우드 데이터를 받아왔습니다.');
+      } else {
+        setSyncStatusText(`이미 최신입니다. (${formatDateTime(nowISO())} 확인)`);
+        showToast('이 기기의 데이터가 이미 최신입니다.');
+      }
+    } catch (e) {
+      console.error(e);
+      setSyncStatusText('받기 실패 — 연결 상태를 확인해주세요.');
+      showToast('받기에 실패했습니다.', 'error');
+    }
+  });
+
+  container.querySelector('#syncClearBtn').addEventListener('click', () => {
+    if (!confirm('클라우드 동기화 연결을 해제할까요? (클라우드와 이 기기의 데이터는 그대로 유지됩니다)')) return;
+    clearSyncConfig();
+    localStorage.removeItem('rsc_sync_status');
+    showToast('동기화 연결을 해제했습니다.');
+    renderSettings(container);
+  });
 
   const bindImageSlot = (inputId, clearId, key, maxW, label) => {
     container.querySelector(inputId).addEventListener('change', async (e) => {
@@ -266,6 +365,9 @@ function init() {
   if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
+
+  /* 클라우드 동기화: 앱을 열 때 최신 데이터 받아오기 */
+  syncOnStartup();
 }
 
 document.addEventListener('DOMContentLoaded', init);
