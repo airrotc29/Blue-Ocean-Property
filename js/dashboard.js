@@ -232,18 +232,16 @@ function openRoomTaskDetail(t, backRoom) {
     <div class="modal-actions">
       ${backRoom ? '<button type="button" class="btn btn-secondary" id="taskBackBtn">← 목록</button>' : ''}
       <span class="detail-actions-spacer"></span>
-      <button type="button" class="btn btn-secondary" id="taskOpenBtn">관리 화면에서 열기</button>
+      <button type="button" class="btn btn-secondary" id="taskEditBtn">수정하기</button>
       <button type="button" class="btn btn-primary" id="taskCloseBtn">닫기</button>
     </div>`, (modalEl) => {
     modalEl.querySelector('#taskCloseBtn').addEventListener('click', closeModal);
     if (backRoom) {
       modalEl.querySelector('#taskBackBtn').addEventListener('click', () => openRoomTasks(backRoom));
     }
-    /* 수정이 필요할 때만 해당 관리 화면으로 이동 */
-    modalEl.querySelector('#taskOpenBtn').addEventListener('click', () => {
-      closeModal();
-      sessionStorage.setItem(`rsc_detail_${t.key}`, t.id);
-      window.location.hash = `#${t.key}`;
+    /* 팝업에서 바로 수정 폼 열기 (저장하면 대시보드가 갱신됨) */
+    modalEl.querySelector('#taskEditBtn').addEventListener('click', () => {
+      view.openForm(item);
     });
   });
 }

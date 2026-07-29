@@ -221,8 +221,7 @@ function createCrudView(config) {
           store.remove(item.id);
           showToast('삭제되었습니다.');
           closeModal();
-          const container = document.getElementById('content');
-          if (container) render(container);
+          renderRoute();
         }
       });
     });
@@ -284,11 +283,11 @@ function createCrudView(config) {
           showToast('등록되었습니다.');
         }
         closeModal();
-        const container = document.getElementById('content');
-        if (container) render(container);
+        /* 대시보드에서 열었을 수도 있으므로 현재 화면 기준으로 다시 그린다 */
+        renderRoute();
       });
     });
   }
 
-  return { config, store, render };
+  return { config, store, render, openForm, openDetail };
 }
