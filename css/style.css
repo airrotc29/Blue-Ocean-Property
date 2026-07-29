@@ -447,9 +447,9 @@ main#content {
 
 /* 호실별 현황판 */
 .room-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
-  gap: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .room-section { margin-bottom: 16px; }
@@ -473,21 +473,21 @@ main#content {
   padding: 1px 8px;
 }
 .room-tile {
-  padding: 12px 4px;
+  padding: 5px 12px;
   text-align: center;
   background: var(--bg);
   border: 1px solid var(--border);
   color: var(--primary);
   font-weight: 700;
-  font-size: 13.5px;
-  border-radius: 9px;
+  font-size: 12.5px;
+  border-radius: 7px;
   cursor: pointer;
   white-space: nowrap;
   transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
 }
 .room-tile:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lift);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
   border-color: var(--gold-light);
   background: var(--gold-bg);
 }

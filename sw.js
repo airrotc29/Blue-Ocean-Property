@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rsc-app-v19';
+const CACHE_NAME = 'rsc-app-v20';
 const ASSETS = [
   './',
   './index.html',
