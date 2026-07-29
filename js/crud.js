@@ -106,6 +106,12 @@ function createCrudView(config) {
       state.badgeFilter = pending;
       sessionStorage.removeItem(`rsc_filter_${config.key}`);
     }
+    /* 대시보드 호실 타일에서 넘어온 경우 해당 호실 검색어 적용 */
+    const pendingSearch = sessionStorage.getItem(`rsc_search_${config.key}`);
+    if (pendingSearch !== null) {
+      state.search = pendingSearch;
+      sessionStorage.removeItem(`rsc_search_${config.key}`);
+    }
     const items = filteredItems();
     const total = store.count();
     container.innerHTML = `

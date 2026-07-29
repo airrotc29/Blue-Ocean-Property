@@ -28,6 +28,13 @@ function formatDate(s) {
   return s ? s : '-';
 }
 
+/** ISO 타임스탬프 → "M/D HH:mm" (현지 시각) */
+function formatDateTime(iso) {
+  const d = new Date(iso);
+  if (!iso || Number.isNaN(d.getTime())) return '';
+  return `${d.getMonth() + 1}/${d.getDate()} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
 function formatNumber(n) {
   if (n === undefined || n === null || n === '') return '-';
   const num = Number(n);

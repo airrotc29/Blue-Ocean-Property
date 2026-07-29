@@ -37,27 +37,16 @@ function renderDashboard(container, crudViews) {
       </div>`;
   }).join('');
 
-  /* 최근 14일 등록/수정 활동 (단일 시리즈 컬럼 차트) */
-  const days = [];
-  for (let i = 13; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    days.push(d);
-  }
-  const activity = days.map((d) => {
-    const key = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-    let n = 0;
-    crudViews.forEach((v) => v.store.getAll().forEach((it) => {
-      if ((it.updatedAt || it.createdAt || '').slice(0, 10) === key) n++;
-    }));
-    return { label: `${d.getMonth() + 1}/${d.getDate()}`, n };
-  });
-  const yMax = Math.max(4, Math.ceil(Math.max(...activity.map((a) => a.n)) / 2) * 2);
-  const colsHtml = activity.map((a) => `
-    <div class="wk-col" data-tip="${a.label} · ${a.n}건">
-      <div class="wk-bar" style="height:${a.n ? Math.max(4, Math.round((a.n / yMax) * 100)) : 0}%"></div>
-    </div>`).join('');
-  const dayLabels = activity.map((a) => `<span class="wk-day">${a.label}</span>`).join('');
+  /* 호실별 현황판: 등록된 모든 호실을 격자로 배치하고 상태를 색으로 표시 */
+  const roomStates = buildRoomBoard(crudViews);
+  const roomTiles = roomStates.map((r) => `
+    <div class="room-tile" style="background:${STATE_COLORS[r.state]}" data-tip="${escapeHtml(r.tip)}" data-room="${escapeHtml(r.no)}">${escapeHtml(r.no)}</div>`).join('');
+  const roomLegend = [
+    ['red', '연체/긴급'],
+    ['yellow', '오늘 퇴실·처리중'],
+    ['blue', '재실/입실예정'],
+    ['gray', '공실/기타'],
+  ].map(([s, label]) => `<span class="room-legend-item"><span class="dl-swatch" style="background:${STATE_COLORS[s]}"></span>${label}</span>`).join('');
 
   const recent = crudViews.flatMap((view) => view.store.getAll().map((it) => ({
     module: view.config,
@@ -70,10 +59,12 @@ function renderDashboard(container, crudViews) {
     const titleField = module.fields.find((f) => f.searchable) || module.fields[0];
     const label = item[titleField.name] || item.id;
     const badge = module.computeBadge ? module.computeBadge(item) : null;
+    const when = formatDateTime(item.updatedAt || item.createdAt);
     return `
       <li class="recent-item" data-route="${module.key}">
         <span class="recent-icon">${module.icon}</span>
         <span class="recent-text"><strong>${escapeHtml(module.shortTitle)}</strong> · ${escapeHtml(label)}</span>
+        ${when ? `<span class="recent-time">${escapeHtml(when)}</span>` : ''}
         ${badge ? `<span class="badge ${badge.cls}">${escapeHtml(badge.text)}</span>` : ''}
       </li>`;
   }).join('') : '<li class="recent-empty">최근 등록된 항목이 없습니다.</li>';
@@ -92,14 +83,9 @@ function renderDashboard(container, crudViews) {
     <div class="dash-grid">${cardsHtml}</div>
     <div class="dash-bottom">
       <div class="dash-panel">
-        <h3>최근 14일 활동</h3>
-        <div class="wk-plot">
-          <div class="wk-gridline" style="bottom:100%"><span>${yMax}</span></div>
-          <div class="wk-gridline" style="bottom:50%"><span>${yMax / 2}</span></div>
-          <div class="wk-gridline" style="bottom:0"><span>0</span></div>
-          <div class="wk-cols">${colsHtml}</div>
-        </div>
-        <div class="wk-days">${dayLabels}</div>
+        <h3>호실별 현황판</h3>
+        <div class="room-legend">${roomLegend}</div>
+        ${roomStates.length ? `<div class="room-grid">${roomTiles}</div>` : '<p class="dist-empty">등록된 호실이 없습니다. 계약이나 입퇴실을 등록하면 호실이 표시됩니다.</p>'}
       </div>
       <div class="dash-panel">
         <h3>최근 등록/수정</h3>
@@ -120,7 +106,73 @@ function renderDashboard(container, crudViews) {
 
   container.querySelector('#dailyReportBtn').addEventListener('click', () => openDailyReport(crudViews));
 
+  /* 호실 타일 클릭 → 입퇴실관리에서 해당 호실 검색 */
+  container.querySelectorAll('.room-tile').forEach((el) => {
+    el.addEventListener('click', () => {
+      sessionStorage.setItem('rsc_search_stays', el.dataset.room);
+      window.location.hash = '#stays';
+    });
+  });
+
   attachVizTips(container);
+}
+
+/** 모든 모듈의 호실번호를 모아 호실별 상태(red > yellow > blue > gray)를 계산 */
+function buildRoomBoard(crudViews) {
+  const byKey = {};
+  crudViews.forEach((v) => { byKey[v.config.key] = v; });
+  const rooms = new Map();
+  const room = (no) => {
+    const k = String(no || '').trim();
+    if (!k) return null;
+    if (!rooms.has(k)) rooms.set(k, { no: k, notes: [], state: 'gray' });
+    return rooms.get(k);
+  };
+  const lift = (r, s) => {
+    const rank = { gray: 0, blue: 1, yellow: 2, red: 3 };
+    if (rank[s] > rank[r.state]) r.state = s;
+  };
+
+  (byKey.contracts ? byKey.contracts.store.getAll() : []).forEach((it) => {
+    const r = room(it.unitNo);
+    if (!r) return;
+    const d = daysDiff(it.endDate);
+    if (it.status !== '해지' && d !== null && d < 0) r.notes.push('계약 만료경과');
+  });
+
+  (byKey.stays ? byKey.stays.store.getAll() : []).forEach((it) => {
+    const r = room(it.unitNo);
+    if (!r) return;
+    if (it.actualCheckOutDate) return; /* 퇴실완료 건은 공실 취급 */
+    const dIn = daysDiff(it.checkInDate);
+    const dOut = daysDiff(it.expectedCheckOutDate);
+    const guest = it.guestName ? `(${it.guestName})` : '';
+    if (dIn !== null && dIn > 0) { lift(r, 'blue'); r.notes.push(`입실 D-${dIn}${guest}`); return; }
+    if (dOut !== null && dOut < 0) { lift(r, 'red'); r.notes.push(`퇴실 연체 ${Math.abs(dOut)}일${guest}`); return; }
+    if (dOut === 0) { lift(r, 'yellow'); r.notes.push(`오늘 퇴실예정${guest}`); return; }
+    lift(r, 'blue');
+    r.notes.push(`재실중${guest}`);
+  });
+
+  (byKey.complaints ? byKey.complaints.store.getAll() : []).forEach((it) => {
+    const r = room(it.unitNo);
+    if (!r) return;
+    if (it.status === '완료' || it.status === '보류') return;
+    lift(r, badgeStateOf(byKey.complaints.config, it) === 'red' ? 'red' : 'yellow');
+    r.notes.push(`민원 ${it.status || '접수'}`);
+  });
+
+  (byKey.defects ? byKey.defects.store.getAll() : []).forEach((it) => {
+    const r = room(it.unitNo);
+    if (!r) return;
+    if (it.status === '완료' || it.status === '보류') return;
+    lift(r, badgeStateOf(byKey.defects.config, it) === 'red' ? 'red' : 'yellow');
+    r.notes.push(`하자 ${it.status || '접수'}`);
+  });
+
+  return [...rooms.values()]
+    .map((r) => ({ ...r, tip: `${r.no}호 · ${r.notes.length ? r.notes.join(' · ') : '공실/특이사항 없음'}` }))
+    .sort((a, b) => a.no.localeCompare(b.no, 'ko', { numeric: true }));
 }
 
 /* ── 일일 업무 보고서: 인쇄 전용 화면을 만들고 브라우저 인쇄(PDF 저장)를 연다 ── */
