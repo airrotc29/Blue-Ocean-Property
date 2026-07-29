@@ -130,6 +130,12 @@ function attachVizTips(root) {
     tip.id = 'vizTip';
     tip.className = 'viz-tip';
     document.body.appendChild(tip);
+    /* 터치 기기에선 mouseleave 가 오지 않으므로 탭/스크롤/화면 이동 시 무조건 숨긴다 */
+    const hide = () => tip.classList.remove('show');
+    window.addEventListener('hashchange', hide);
+    window.addEventListener('scroll', hide, { passive: true });
+    document.addEventListener('click', hide, true);
+    document.addEventListener('touchstart', hide, { passive: true, capture: true });
   }
   root.querySelectorAll('[data-tip]').forEach((el) => {
     el.addEventListener('mouseenter', () => { tip.textContent = el.dataset.tip; tip.classList.add('show'); });
