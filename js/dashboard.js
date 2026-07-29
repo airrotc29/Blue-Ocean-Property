@@ -171,7 +171,16 @@ function buildRoomBoard(crudViews) {
   });
 
   return [...rooms.values()]
-    .map((r) => ({ ...r, tip: `${r.no}호 · ${r.notes.length ? r.notes.join(' · ') : '공실/특이사항 없음'}` }))
+    .map((r) => {
+      /* 같은 문구는 하나로 묶고(×N), 최대 3가지만 표시해 툴팁을 짧게 유지 */
+      const counted = new Map();
+      r.notes.forEach((n) => counted.set(n, (counted.get(n) || 0) + 1));
+      const parts = [...counted.entries()].map(([n, c]) => (c > 1 ? `${n} ×${c}` : n));
+      const shown = parts.slice(0, 3);
+      const more = parts.length - shown.length;
+      const summary = parts.length ? shown.join(' · ') + (more > 0 ? ` 외 ${more}건` : '') : '공실/특이사항 없음';
+      return { ...r, tip: `${r.no}호 · ${summary}` };
+    })
     .sort((a, b) => a.no.localeCompare(b.no, 'ko', { numeric: true }));
 }
 

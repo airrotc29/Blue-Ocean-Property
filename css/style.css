@@ -508,7 +508,9 @@ main#content {
   border-radius: 8px;
   padding: 6px 11px;
   font-size: 12.5px;
-  white-space: nowrap;
+  white-space: normal;
+  max-width: 320px;
+  line-height: 1.45;
   opacity: 0;
   transition: opacity 0.1s ease;
   box-shadow: var(--shadow-lift);
