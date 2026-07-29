@@ -121,7 +121,7 @@ function renderDashboard(container, crudViews) {
         return;
       }
       if (r.tasks.length === 1) {
-        gotoRoomTask(r.tasks[0]);
+        openRoomTaskDetail(r.tasks[0], null);
         return;
       }
       openRoomTasks(r);
@@ -200,10 +200,52 @@ function buildRoomBoard(crudViews) {
     .sort((a, b) => a.no.localeCompare(b.no, 'ko', { numeric: true }));
 }
 
-/** 특정 업무 건으로 이동: 해당 모듈 화면을 열고 그 건의 상세 모달을 띄운다 */
-function gotoRoomTask(t) {
-  sessionStorage.setItem(`rsc_detail_${t.key}`, t.id);
-  window.location.hash = `#${t.key}`;
+/** 업무 건의 상세 내용을 대시보드 위 팝업으로 표시 (페이지 이동 없음) */
+function openRoomTaskDetail(t, backRoom) {
+  const view = crudViews.find((v) => v.config.key === t.key);
+  const item = view ? view.store.get(t.id) : null;
+  if (!view || !item) { showToast('항목을 찾을 수 없습니다.', 'error'); return; }
+  const config = view.config;
+  const badge = config.computeBadge ? config.computeBadge(item) : null;
+  const rows = config.fields.map((f) => {
+    let v = item[f.name];
+    if (f.type === 'number') v = formatNumber(v);
+    v = (v === undefined || v === null || v === '') ? '-' : String(v);
+    return `
+      <div class="detail-row${f.type === 'textarea' ? ' detail-row-full' : ''}">
+        <dt>${escapeHtml(f.label)}</dt>
+        <dd>${escapeHtml(v)}</dd>
+      </div>`;
+  }).join('');
+  const meta = [
+    item.createdAt ? `등록 ${formatDateTime(item.createdAt)}` : '',
+    item.updatedAt ? `수정 ${formatDateTime(item.updatedAt)}` : '',
+  ].filter(Boolean).join(' · ');
+
+  openModal(`
+    <div class="detail-head">
+      <h3>${escapeHtml(config.shortTitle)} 상세</h3>
+      ${badge ? `<span class="badge ${badge.cls}">${escapeHtml(badge.text)}</span>` : ''}
+    </div>
+    <dl class="detail-grid">${rows}</dl>
+    ${meta ? `<p class="detail-meta">${escapeHtml(meta)}</p>` : ''}
+    <div class="modal-actions">
+      ${backRoom ? '<button type="button" class="btn btn-secondary" id="taskBackBtn">← 목록</button>' : ''}
+      <span class="detail-actions-spacer"></span>
+      <button type="button" class="btn btn-secondary" id="taskOpenBtn">관리 화면에서 열기</button>
+      <button type="button" class="btn btn-primary" id="taskCloseBtn">닫기</button>
+    </div>`, (modalEl) => {
+    modalEl.querySelector('#taskCloseBtn').addEventListener('click', closeModal);
+    if (backRoom) {
+      modalEl.querySelector('#taskBackBtn').addEventListener('click', () => openRoomTasks(backRoom));
+    }
+    /* 수정이 필요할 때만 해당 관리 화면으로 이동 */
+    modalEl.querySelector('#taskOpenBtn').addEventListener('click', () => {
+      closeModal();
+      sessionStorage.setItem(`rsc_detail_${t.key}`, t.id);
+      window.location.hash = `#${t.key}`;
+    });
+  });
 }
 
 /** 호실에 업무가 여러 건이면 선택 모달을 띄운다 */
@@ -218,13 +260,12 @@ function openRoomTasks(r) {
     <div class="detail-head"><h3>${escapeHtml(r.no)}호 · 오늘 업무 ${r.tasks.length}건</h3></div>
     <ul class="recent-list">${rows}</ul>
     <div class="modal-actions">
-      <button type="button" class="btn btn-secondary" id="roomTasksClose">닫기</button>
+      <button type="button" class="btn btn-primary" id="roomTasksClose">닫기</button>
     </div>`, (modalEl) => {
     modalEl.querySelector('#roomTasksClose').addEventListener('click', closeModal);
     modalEl.querySelectorAll('.room-task').forEach((li) => {
       li.addEventListener('click', () => {
-        closeModal();
-        gotoRoomTask(r.tasks[Number(li.dataset.idx)]);
+        openRoomTaskDetail(r.tasks[Number(li.dataset.idx)], r);
       });
     });
   });
