@@ -39,10 +39,15 @@ function renderDashboard(container, crudViews) {
   }).join('') : '<li class="recent-empty">최근 등록된 항목이 없습니다.</li>';
 
   container.innerHTML = `
-    <div class="view-header">
-      <h2>🏨 블루오션 레지던스 호텔 입주지원센터</h2>
-      <p class="view-desc">${escapeHtml(todayStr())} 기준 업무 현황입니다. (㈜블루오션자산관리)</p>
-    </div>
+    <section class="hero">
+      <div class="hero-media"></div>
+      <div class="hero-inner">
+        <p class="hero-kicker">Residential Support Center</p>
+        <h2>블루오션 레지던스 호텔 입주지원센터</h2>
+        <hr class="hero-rule">
+        <p class="hero-sub">㈜블루오션자산관리 · ${escapeHtml(todayStr())} 기준 업무 현황</p>
+      </div>
+    </section>
     <div class="dash-grid">${cardsHtml}</div>
     <div class="dash-recent">
       <h3>최근 등록/수정</h3>

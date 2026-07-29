@@ -151,6 +151,14 @@ function createCrudView(config) {
 
     openModal(html, (modalEl) => {
       modalEl.querySelector('#cancelBtn').addEventListener('click', closeModal);
+      /* 날짜 필드는 아무 곳이나 눌러도 달력이 바로 열리도록 */
+      modalEl.querySelectorAll('input[type="date"]').forEach((inp) => {
+        inp.addEventListener('click', () => {
+          if (typeof inp.showPicker === 'function') {
+            try { inp.showPicker(); } catch (e) { /* 사용자 제스처 외 호출 등은 무시 */ }
+          }
+        });
+      });
       modalEl.querySelector('#crudForm').addEventListener('submit', (e) => {
         e.preventDefault();
         const fd = new FormData(e.target);
