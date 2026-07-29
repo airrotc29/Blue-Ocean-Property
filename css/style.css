@@ -545,11 +545,13 @@ main#content {
 .recent-icon { font-size: 15px; }
 .recent-text { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .recent-time {
+  flex: 0 0 74px;
   font-size: 12px;
   color: var(--text-muted);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
+.recent-item .badge { flex-shrink: 0; }
 .recent-empty { color: var(--text-muted); padding: 8px 4px; font-size: 14px; }
 
 /* ── 설정 ───────────────────────────────── */

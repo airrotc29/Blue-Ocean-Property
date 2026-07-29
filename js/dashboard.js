@@ -62,9 +62,9 @@ function renderDashboard(container, crudViews) {
     const when = formatDateTime(item.updatedAt || item.createdAt);
     return `
       <li class="recent-item" data-route="${module.key}">
+        <span class="recent-time">${escapeHtml(when || '-')}</span>
         <span class="recent-icon">${module.icon}</span>
         <span class="recent-text"><strong>${escapeHtml(module.shortTitle)}</strong> · ${escapeHtml(label)}</span>
-        ${when ? `<span class="recent-time">${escapeHtml(when)}</span>` : ''}
         ${badge ? `<span class="badge ${badge.cls}">${escapeHtml(badge.text)}</span>` : ''}
       </li>`;
   }).join('') : '<li class="recent-empty">최근 등록된 항목이 없습니다.</li>';
