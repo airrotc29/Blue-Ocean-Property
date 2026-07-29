@@ -37,14 +37,14 @@ function renderDashboard(container, crudViews) {
       </div>`;
   }).join('');
 
-  /* 호실별 현황판: 진행 중인 업무(연체·긴급, 처리중, 재실 등)가 있는 호실만 표시 */
+  /* 오늘 업무 호실판: 오늘 입실/퇴실, 연체, 미처리 민원·하자가 있는 호실만 표시 */
   const roomStates = buildRoomBoard(crudViews).filter((r) => r.state !== 'gray');
   const roomTiles = roomStates.map((r) => `
     <div class="room-tile" style="background:${STATE_COLORS[r.state]}" data-tip="${escapeHtml(r.tip)}" data-room="${escapeHtml(r.no)}">${escapeHtml(r.no)}</div>`).join('');
   const roomLegend = [
     ['red', '연체/긴급'],
     ['yellow', '오늘 퇴실·처리중'],
-    ['blue', '재실/입실예정'],
+    ['blue', '오늘 입실예정'],
   ].map(([s, label]) => `<span class="room-legend-item"><span class="dl-swatch" style="background:${STATE_COLORS[s]}"></span>${label}</span>`).join('');
 
   const recent = crudViews.flatMap((view) => view.store.getAll().map((it) => ({
@@ -82,9 +82,9 @@ function renderDashboard(container, crudViews) {
     <div class="dash-grid">${cardsHtml}</div>
     <div class="dash-bottom">
       <div class="dash-panel">
-        <h3>호실별 현황판</h3>
+        <h3>오늘 업무가 있는 호실</h3>
         <div class="room-legend">${roomLegend}</div>
-        ${roomStates.length ? `<div class="room-grid">${roomTiles}</div>` : '<p class="dist-empty">현재 진행 중인 업무가 있는 호실이 없습니다.</p>'}
+        ${roomStates.length ? `<div class="room-grid">${roomTiles}</div>` : '<p class="dist-empty">오늘 처리할 업무가 있는 호실이 없습니다. 🎉</p>'}
       </div>
       <div class="dash-panel">
         <h3>최근 등록/수정</h3>
@@ -142,15 +142,15 @@ function buildRoomBoard(crudViews) {
   (byKey.stays ? byKey.stays.store.getAll() : []).forEach((it) => {
     const r = room(it.unitNo);
     if (!r) return;
-    if (it.actualCheckOutDate) return; /* 퇴실완료 건은 공실 취급 */
+    if (it.actualCheckOutDate) return; /* 퇴실완료 건은 업무 없음 */
     const dIn = daysDiff(it.checkInDate);
     const dOut = daysDiff(it.expectedCheckOutDate);
     const guest = it.guestName ? `(${it.guestName})` : '';
-    if (dIn !== null && dIn > 0) { lift(r, 'blue'); r.notes.push(`입실 D-${dIn}${guest}`); return; }
+    if (dIn === 0) { lift(r, 'blue'); r.notes.push(`오늘 입실예정${guest}`); return; }
+    if (dIn !== null && dIn > 0) return; /* 향후 입실 예정: 오늘 업무 아님 */
     if (dOut !== null && dOut < 0) { lift(r, 'red'); r.notes.push(`퇴실 연체 ${Math.abs(dOut)}일${guest}`); return; }
     if (dOut === 0) { lift(r, 'yellow'); r.notes.push(`오늘 퇴실예정${guest}`); return; }
-    lift(r, 'blue');
-    r.notes.push(`재실중${guest}`);
+    /* 단순 재실중: 오늘 처리할 업무가 아니므로 표시하지 않음 */
   });
 
   (byKey.complaints ? byKey.complaints.store.getAll() : []).forEach((it) => {
