@@ -87,3 +87,49 @@ function debounce(fn, wait) {
     t = setTimeout(() => fn(...args), wait);
   };
 }
+
+/* ── 현황(배지) 상태 공통 정의: 대시보드 차트와 목록의 현황별 보기가 함께 사용 ── */
+
+/* 차트 색상: 색각이상 검증(validate_palette)을 통과한 조합. 순서도 검증된 인접 순서 */
+const STATE_ORDER = ['green', 'blue', 'yellow', 'red', 'gray'];
+const STATE_COLORS = {
+  green: '#1f7d54',
+  blue: '#2b5aa0',
+  yellow: '#d19a06',
+  red: '#9c2b20',
+  gray: '#5d6b85',
+};
+
+/* 모듈별 배지 상태 이름 (computeBadge 가 반환하는 badge-* 클래스 기준) */
+const MODULE_STATE_LABELS = {
+  contracts: { green: '유효', yellow: '만료임박', red: '만료경과', gray: '해지/기타' },
+  stays: { blue: '재실/입실예정', yellow: '오늘 퇴실예정', red: '퇴실 연체', gray: '퇴실완료' },
+  complaints: { yellow: '처리중', red: '긴급처리 필요', green: '완료', gray: '보류' },
+  defects: { yellow: '처리중', red: '긴급처리 필요', green: '완료', gray: '보류' },
+};
+
+/** 항목의 현황 상태 키(green/yellow/...)를 계산 */
+function badgeStateOf(config, item) {
+  if (!config.computeBadge) return 'gray';
+  const b = config.computeBadge(item);
+  return (b && b.cls ? b.cls : 'badge-gray').replace('badge-', '');
+}
+
+/** data-tip 속성이 붙은 요소들에 마우스 추적 툴팁 연결 */
+function attachVizTips(root) {
+  let tip = document.getElementById('vizTip');
+  if (!tip) {
+    tip = document.createElement('div');
+    tip.id = 'vizTip';
+    tip.className = 'viz-tip';
+    document.body.appendChild(tip);
+  }
+  root.querySelectorAll('[data-tip]').forEach((el) => {
+    el.addEventListener('mouseenter', () => { tip.textContent = el.dataset.tip; tip.classList.add('show'); });
+    el.addEventListener('mousemove', (e) => {
+      tip.style.left = `${Math.min(e.clientX + 14, window.innerWidth - tip.offsetWidth - 8)}px`;
+      tip.style.top = `${e.clientY - 36}px`;
+    });
+    el.addEventListener('mouseleave', () => tip.classList.remove('show'));
+  });
+}

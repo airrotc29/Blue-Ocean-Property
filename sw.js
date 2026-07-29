@@ -1,6 +1,5 @@
-const CACHE_NAME = 'rsc-app-v2';
+const CACHE_NAME = 'rsc-app-v3';
 const ASSETS = [
-  './assets/logo.png',
   './',
   './index.html',
   './css/style.css',

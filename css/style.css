@@ -76,15 +76,6 @@ html, body {
   white-space: nowrap;
 }
 
-.brand-logo {
-  height: 34px;
-  width: auto;
-  border-radius: 6px;
-  background: #fff;
-  padding: 2px 4px;
-}
-.brand-fallback { font-size: 20px; }
-
 .brand-text { display: flex; flex-direction: column; line-height: 1.3; }
 .brand-text strong { font-family: var(--font-serif); font-size: 15px; letter-spacing: 0.01em; color: var(--primary); }
 .brand-text small { font-size: 11.5px; font-weight: 600; color: var(--gold); letter-spacing: 0.14em; }
@@ -187,6 +178,14 @@ main#content {
 }
 
 .hero-sub { margin: 0; font-size: 13.5px; color: rgba(245, 242, 234, 0.85); letter-spacing: 0.02em; }
+
+.btn-report {
+  margin-top: 16px;
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  color: #1a2050;
+  border: none;
+}
+.btn-report:hover { filter: brightness(1.06); box-shadow: 0 0 0 3px rgba(212, 185, 106, 0.35); }
 
 /* ── 툴바 ───────────────────────────────── */
 .toolbar {
@@ -326,7 +325,24 @@ main#content {
 .dash-card:hover::before { opacity: 1; }
 
 .dash-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; font-weight: 700; }
-.dash-card-head .dash-card-title { font-family: var(--font-serif); color: var(--primary); }
+.dash-card-head .dash-card-title {
+  font-family: var(--font-serif);
+  color: var(--primary);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dash-card-total {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gold);
+  background: var(--gold-bg);
+  border: 1px solid #efe5cd;
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
 .dash-card-icon {
   font-size: 17px;
   width: 36px;
@@ -347,6 +363,173 @@ main#content {
 .stat-warn .stat-value { color: var(--yellow); }
 .stat-danger { background: var(--red-bg); }
 .stat-danger .stat-value { color: var(--red); }
+
+/* ── 현황 분포 차트 (스택 바 + 범례) ─────── */
+.dist-bar {
+  display: flex;
+  gap: 2px; /* 세그먼트 사이 2px 서피스 간격 */
+  height: 14px;
+  border-radius: 7px;
+  overflow: hidden;
+  background: var(--gray-bg);
+  margin-bottom: 12px;
+}
+.dist-seg { min-width: 6px; cursor: pointer; }
+
+.dist-legend { list-style: none; margin: 0; padding: 0; }
+.dl-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 2px;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.dl-row:hover { background: var(--gold-bg); }
+.dl-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  display: inline-block;
+}
+.dl-label { flex: 0 0 96px; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
+.dl-track {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--gray-bg);
+  overflow: hidden;
+}
+.dl-fill { display: block; height: 100%; border-radius: 0 4px 4px 0; }
+.dl-count { font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; min-width: 18px; text-align: right; }
+.dist-empty { margin: 4px 0 0; color: var(--text-muted); font-size: 13px; }
+
+/* ── 하단 2단: 주간 활동 차트 + 최근 내역 ── */
+.dash-bottom {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 16px;
+}
+@media (max-width: 860px) {
+  .dash-bottom { grid-template-columns: 1fr; }
+}
+
+.dash-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  box-shadow: var(--shadow);
+}
+.dash-panel h3 {
+  margin: 0 0 12px;
+  font-family: var(--font-serif);
+  font-size: 15.5px;
+  color: var(--primary);
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--gold-bg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 주간 활동 컬럼 차트 */
+.wk-plot { position: relative; height: 132px; margin: 18px 0 0; padding-left: 30px; }
+.wk-gridline {
+  position: absolute;
+  left: 30px;
+  right: 0;
+  border-top: 1px solid var(--gray-bg); /* 헤어라인 그리드 */
+  height: 0;
+}
+.wk-gridline span {
+  position: absolute;
+  left: -30px;
+  top: -7px;
+  width: 24px;
+  text-align: right;
+  font-size: 10.5px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.wk-cols {
+  position: absolute;
+  inset: 0 0 0 30px;
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+}
+.wk-col {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.wk-col:hover { background: var(--gold-bg); border-radius: 6px 6px 0 0; }
+.wk-bar {
+  width: 100%;
+  max-width: 22px;
+  border-radius: 4px 4px 0 0; /* 데이터 끝만 둥글게, 기준선은 직각 */
+  background: var(--primary);
+}
+.wk-days { display: flex; gap: 5px; padding-left: 30px; margin-top: 6px; }
+.wk-day { flex: 1; text-align: center; font-size: 10.5px; color: var(--text-muted); white-space: nowrap; }
+@media (max-width: 640px) {
+  .wk-day:nth-child(odd) { visibility: hidden; } /* 좁은 화면에선 라벨 절반만 */
+}
+
+/* 현황별 보기 칩 (목록 화면) */
+.state-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding: 2px 0 6px;
+  margin-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+.state-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.state-chip:hover { background: var(--gold-bg); border-color: var(--gold-light); }
+.state-chip.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.state-chip.active .chip-count { color: var(--gold-light); }
+.chip-count { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--gold); }
+
+/* 차트 툴팁 */
+.viz-tip {
+  position: fixed;
+  z-index: 300;
+  pointer-events: none;
+  background: var(--primary);
+  color: #f5f2ea;
+  border: 1px solid var(--gold);
+  border-radius: 8px;
+  padding: 6px 11px;
+  font-size: 12.5px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.1s ease;
+  box-shadow: var(--shadow-lift);
+}
+.viz-tip.show { opacity: 1; }
 
 .dash-recent {
   background: var(--surface);
@@ -376,7 +559,7 @@ main#content {
 .recent-item:last-child { border-bottom: none; }
 .recent-item:hover { color: var(--gold); }
 .recent-icon { font-size: 15px; }
-.recent-text { flex: 1; }
+.recent-text { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .recent-empty { color: var(--text-muted); padding: 8px 4px; font-size: 14px; }
 
 /* ── 설정 ───────────────────────────────── */
@@ -585,4 +768,51 @@ main#content {
   .modal-actions { position: sticky; bottom: -18px; background: var(--surface); margin: 20px -16px -18px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); }
 
   .settings-grid { grid-template-columns: 1fr; }
+}
+
+/* ── 일일 업무 보고서 (인쇄/PDF 전용) ───────── */
+#printRoot { display: none; }
+
+@media print {
+  @page { size: A4; margin: 18mm 16mm; }
+  #app, #modalRoot, #toastRoot, .viz-tip { display: none !important; }
+  #printRoot { display: block; }
+  html, body { background: #fff; }
+
+  .report { color: #000; font-family: var(--font-sans); font-size: 12px; }
+  .rp-head { text-align: center; margin-bottom: 18px; }
+  .rp-head h1 {
+    margin: 0 0 6px;
+    font-family: var(--font-serif);
+    font-size: 24px;
+    letter-spacing: 0.3em;
+  }
+  .rp-head p { margin: 0; font-size: 13px; }
+
+  .rp-meta, .rp-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
+  .rp-meta th, .rp-meta td, .rp-table th, .rp-table td {
+    border: 1px solid #444;
+    padding: 6px 9px;
+    font-size: 12px;
+    text-align: left;
+  }
+  .rp-meta th { background: #f0f0f0; width: 72px; text-align: center; white-space: nowrap; }
+  .rp-meta td { min-width: 90px; }
+  .rp-table th { background: #f0f0f0; }
+  .rp-table .rp-num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  .report h2 { font-size: 14px; margin: 16px 0 8px; }
+  .rp-empty { margin: 4px 0 10px; font-size: 12px; }
+
+  .rp-sign { display: flex; justify-content: flex-end; gap: 24px; margin-top: 28px; }
+  .rp-sign-box {
+    border: 1px solid #444;
+    padding: 10px 14px 34px;
+    min-width: 110px;
+    font-size: 12px;
+    text-align: center;
+  }
+  .rp-sign-box span { margin-left: 8px; color: #888; }
+
+  .rp-footnote { margin-top: 18px; font-size: 10.5px; color: #666; text-align: center; }
 }

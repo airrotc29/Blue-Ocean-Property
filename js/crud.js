@@ -2,7 +2,7 @@
 
 function createCrudView(config) {
   const store = new Store(config.key);
-  let state = { search: '', statusFilter: '전체' };
+  let state = { search: '', statusFilter: '전체', badgeFilter: 'all' };
 
   function filteredItems() {
     let items = store.getAll();
@@ -13,6 +13,9 @@ function createCrudView(config) {
     }
     if (state.statusFilter !== '전체') {
       items = items.filter((it) => it[config.statusField] === state.statusFilter);
+    }
+    if (state.badgeFilter !== 'all') {
+      items = items.filter((it) => badgeStateOf(config, it) === state.badgeFilter);
     }
     const dir = config.sortDir === 'desc' ? -1 : 1;
     items = [...items].sort((a, b) => {
@@ -35,6 +38,27 @@ function createCrudView(config) {
         <div class="toolbar-spacer"></div>
         <button class="btn btn-secondary" id="exportCsvBtn">CSV 내보내기</button>
         <button class="btn btn-primary" id="addBtn">+ 신규 등록</button>
+      </div>`;
+  }
+
+  /* 현황별 보기 칩: 완료 / 긴급처리 필요 / 처리중 등 계산된 현황으로 빠르게 필터 */
+  function renderStateChips() {
+    const labels = MODULE_STATE_LABELS[config.key] || {};
+    const all = store.getAll();
+    const counts = {};
+    all.forEach((it) => {
+      const s = badgeStateOf(config, it);
+      counts[s] = (counts[s] || 0) + 1;
+    });
+    const chips = STATE_ORDER.filter((s) => labels[s]).map((s) => `
+      <button class="state-chip ${state.badgeFilter === s ? 'active' : ''}" data-state="${s}">
+        <span class="dl-swatch" style="background:${STATE_COLORS[s]}"></span>${escapeHtml(labels[s])}
+        <span class="chip-count">${counts[s] || 0}</span>
+      </button>`).join('');
+    return `
+      <div class="state-chips">
+        <button class="state-chip ${state.badgeFilter === 'all' ? 'active' : ''}" data-state="all">전체 <span class="chip-count">${all.length}</span></button>
+        ${chips}
       </div>`;
   }
 
@@ -76,6 +100,12 @@ function createCrudView(config) {
   }
 
   function render(container) {
+    /* 대시보드에서 현황을 클릭해 넘어온 경우 해당 필터를 적용 */
+    const pending = sessionStorage.getItem(`rsc_filter_${config.key}`);
+    if (pending) {
+      state.badgeFilter = pending;
+      sessionStorage.removeItem(`rsc_filter_${config.key}`);
+    }
     const items = filteredItems();
     const total = store.count();
     container.innerHTML = `
@@ -84,9 +114,17 @@ function createCrudView(config) {
         <p class="view-desc">${escapeHtml(config.description)}</p>
       </div>
       ${renderToolbar()}
+      ${renderStateChips()}
       ${renderCount(items, total)}
       ${renderTable(items)}
     `;
+
+    container.querySelectorAll('.state-chip').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        state.badgeFilter = chip.dataset.state;
+        render(container);
+      });
+    });
 
     container.querySelector('#searchInput').addEventListener('input', debounce((e) => {
       state.search = e.target.value;
