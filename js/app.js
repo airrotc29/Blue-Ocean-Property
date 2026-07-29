@@ -232,6 +232,8 @@ function initNav() {
   document.getElementById('menuToggle').addEventListener('click', () => {
     document.getElementById('nav').classList.toggle('open');
   });
+
+  document.getElementById('dailyReportBtn').addEventListener('click', () => openDailyReport(crudViews));
 }
 
 let defaultBrandMarkHtml = '';

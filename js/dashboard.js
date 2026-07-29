@@ -90,7 +90,6 @@ function renderDashboard(container, crudViews) {
         <h2>블루오션 레지던스 호텔 입주지원센터</h2>
         <hr class="hero-rule">
         <p class="hero-sub">㈜블루오션자산관리 · ${escapeHtml(todayStr())} 기준 업무 현황</p>
-        <button class="btn btn-report" id="dailyReportBtn">📄 일일업무보고서 PDF</button>
       </div>
     </section>
     <div class="dash-grid">${cardsHtml}</div>
@@ -121,8 +120,6 @@ function renderDashboard(container, crudViews) {
   if (heroData) {
     container.querySelector('.hero-media').style.backgroundImage = `url(${heroData})`;
   }
-
-  container.querySelector('#dailyReportBtn').addEventListener('click', () => openDailyReport(crudViews));
 
   /* 호실 타일 클릭 → 해당 카테고리 업무가 1건이면 바로 상세 팝업, 여러 건이면 선택 모달 */
   container.querySelectorAll('.room-tile').forEach((el) => {

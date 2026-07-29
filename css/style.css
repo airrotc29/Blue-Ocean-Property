@@ -131,8 +131,8 @@ html, body {
 }
 .bw-top { font-size: 17px; font-weight: 800; letter-spacing: 0.1em; }
 .bw-sub { font-size: 9px; font-weight: 600; letter-spacing: 0.3em; margin-top: 2px; }
-@media (max-width: 1020px) {
-  .brand-word { display: none; } /* 좁은 화면에선 메뉴 공간 확보 */
+@media (max-width: 1320px) {
+  .brand-word { display: none; } /* 좁은 화면에선 메뉴·보고서 버튼 공간 확보 */
 }
 
 main#content {
@@ -199,12 +199,17 @@ main#content {
 .hero-sub { margin: 0; font-size: 13.5px; color: rgba(245, 242, 234, 0.85); letter-spacing: 0.02em; }
 
 .btn-report {
-  margin-top: 16px;
   background: linear-gradient(135deg, var(--gold), var(--gold-light));
   color: #1a2050;
   border: none;
 }
 .btn-report:hover { filter: brightness(1.06); box-shadow: 0 0 0 3px rgba(212, 185, 106, 0.35); }
+
+.topbar-report { padding: 8px 14px; font-size: 13px; flex-shrink: 0; }
+@media (max-width: 760px) {
+  .rp-btn-label { display: none; } /* 좁은 화면에선 아이콘만 */
+  .topbar-report { padding: 8px 11px; }
+}
 
 /* ── 툴바 ───────────────────────────────── */
 .toolbar {
