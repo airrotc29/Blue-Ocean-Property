@@ -673,6 +673,10 @@ main#content {
 .detail-meta { margin: 14px 0 0; font-size: 12px; color: var(--text-muted); }
 .detail-actions-spacer { flex: 1; }
 
+.room-task { border-radius: 8px; padding-left: 8px; padding-right: 8px; }
+.room-task:hover { background: var(--gold-bg); color: var(--text); }
+.room-task-go { color: var(--gold); font-weight: 800; font-size: 16px; }
+
 /* ── 토스트 ─────────────────────────────── */
 #toastRoot {
   position: fixed;

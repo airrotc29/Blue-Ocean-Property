@@ -112,6 +112,13 @@ function createCrudView(config) {
       state.search = pendingSearch;
       sessionStorage.removeItem(`rsc_search_${config.key}`);
     }
+    /* 대시보드에서 특정 업무 건을 클릭해 넘어온 경우 그 건의 상세를 바로 연다 */
+    const pendingDetail = sessionStorage.getItem(`rsc_detail_${config.key}`);
+    if (pendingDetail) {
+      sessionStorage.removeItem(`rsc_detail_${config.key}`);
+      const target = store.get(pendingDetail);
+      if (target) setTimeout(() => openDetail(target), 0);
+    }
     const items = filteredItems();
     const total = store.count();
     container.innerHTML = `

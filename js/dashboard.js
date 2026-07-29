@@ -111,18 +111,27 @@ function renderDashboard(container, crudViews) {
 
   container.querySelector('#dailyReportBtn').addEventListener('click', () => openDailyReport(crudViews));
 
-  /* 호실 타일 클릭 → 입퇴실관리에서 해당 호실 검색 */
+  /* 호실 타일 클릭 → 업무 1건이면 바로 그 건 상세로, 여러 건이면 선택 모달 */
   container.querySelectorAll('.room-tile').forEach((el) => {
     el.addEventListener('click', () => {
-      sessionStorage.setItem('rsc_search_stays', el.dataset.room);
-      window.location.hash = '#stays';
+      const r = roomStates.find((x) => x.no === el.dataset.room);
+      if (!r || r.tasks.length === 0) {
+        sessionStorage.setItem('rsc_search_stays', el.dataset.room);
+        window.location.hash = '#stays';
+        return;
+      }
+      if (r.tasks.length === 1) {
+        gotoRoomTask(r.tasks[0]);
+        return;
+      }
+      openRoomTasks(r);
     });
   });
 
   attachVizTips(container);
 }
 
-/** 모든 모듈의 호실번호를 모아 호실별 상태(red > yellow > blue > gray)를 계산 */
+/** 모든 모듈의 호실번호를 모아 호실별 상태(red > yellow > blue > gray)와 업무 목록을 계산 */
 function buildRoomBoard(crudViews) {
   const byKey = {};
   crudViews.forEach((v) => { byKey[v.config.key] = v; });
@@ -130,19 +139,21 @@ function buildRoomBoard(crudViews) {
   const room = (no) => {
     const k = String(no || '').trim();
     if (!k) return null;
-    if (!rooms.has(k)) rooms.set(k, { no: k, notes: [], state: 'gray' });
+    if (!rooms.has(k)) rooms.set(k, { no: k, tasks: [], state: 'gray' });
     return rooms.get(k);
   };
   const lift = (r, s) => {
     const rank = { gray: 0, blue: 1, yellow: 2, red: 3 };
     if (rank[s] > rank[r.state]) r.state = s;
   };
+  /* 업무 항목: 클릭 시 해당 모듈의 그 건 상세로 이동할 수 있게 모듈 키와 id 를 함께 기록 */
+  const task = (r, key, it, text) => r.tasks.push({ key, id: it.id, icon: byKey[key].config.icon, text });
 
   (byKey.contracts ? byKey.contracts.store.getAll() : []).forEach((it) => {
     const r = room(it.unitNo);
     if (!r) return;
     const d = daysDiff(it.endDate);
-    if (it.status !== '해지' && d !== null && d < 0) r.notes.push('계약 만료경과');
+    if (it.status !== '해지' && d !== null && d < 0) task(r, 'contracts', it, `계약 만료 ${Math.abs(d)}일 경과`);
   });
 
   (byKey.stays ? byKey.stays.store.getAll() : []).forEach((it) => {
@@ -152,10 +163,10 @@ function buildRoomBoard(crudViews) {
     const dIn = daysDiff(it.checkInDate);
     const dOut = daysDiff(it.expectedCheckOutDate);
     const guest = it.guestName ? `(${it.guestName})` : '';
-    if (dIn === 0) { lift(r, 'blue'); r.notes.push(`오늘 입실예정${guest}`); return; }
+    if (dIn === 0) { lift(r, 'blue'); task(r, 'stays', it, `오늘 입실예정${guest}`); return; }
     if (dIn !== null && dIn > 0) return; /* 향후 입실 예정: 오늘 업무 아님 */
-    if (dOut !== null && dOut < 0) { lift(r, 'red'); r.notes.push(`퇴실 연체 ${Math.abs(dOut)}일${guest}`); return; }
-    if (dOut === 0) { lift(r, 'yellow'); r.notes.push(`오늘 퇴실예정${guest}`); return; }
+    if (dOut !== null && dOut < 0) { lift(r, 'red'); task(r, 'stays', it, `퇴실 연체 ${Math.abs(dOut)}일${guest}`); return; }
+    if (dOut === 0) { lift(r, 'yellow'); task(r, 'stays', it, `오늘 퇴실예정${guest}`); return; }
     /* 단순 재실중: 오늘 처리할 업무가 아니므로 표시하지 않음 */
   });
 
@@ -164,7 +175,7 @@ function buildRoomBoard(crudViews) {
     if (!r) return;
     if (it.status === '완료' || it.status === '보류') return;
     lift(r, badgeStateOf(byKey.complaints.config, it) === 'red' ? 'red' : 'yellow');
-    r.notes.push(`민원 ${it.status || '접수'}`);
+    task(r, 'complaints', it, `민원 ${it.status || '접수'}${it.title ? `: ${it.title}` : ''}`);
   });
 
   (byKey.defects ? byKey.defects.store.getAll() : []).forEach((it) => {
@@ -172,14 +183,14 @@ function buildRoomBoard(crudViews) {
     if (!r) return;
     if (it.status === '완료' || it.status === '보류') return;
     lift(r, badgeStateOf(byKey.defects.config, it) === 'red' ? 'red' : 'yellow');
-    r.notes.push(`하자 ${it.status || '접수'}`);
+    task(r, 'defects', it, `하자 ${it.status || '접수'}${it.content ? `: ${it.content}` : ''}`);
   });
 
   return [...rooms.values()]
     .map((r) => {
       /* 같은 문구는 하나로 묶고(×N), 최대 3가지만 표시해 툴팁을 짧게 유지 */
       const counted = new Map();
-      r.notes.forEach((n) => counted.set(n, (counted.get(n) || 0) + 1));
+      r.tasks.forEach((t) => counted.set(t.text, (counted.get(t.text) || 0) + 1));
       const parts = [...counted.entries()].map(([n, c]) => (c > 1 ? `${n} ×${c}` : n));
       const shown = parts.slice(0, 3);
       const more = parts.length - shown.length;
@@ -187,6 +198,36 @@ function buildRoomBoard(crudViews) {
       return { ...r, tip: `${r.no}호 · ${summary}` };
     })
     .sort((a, b) => a.no.localeCompare(b.no, 'ko', { numeric: true }));
+}
+
+/** 특정 업무 건으로 이동: 해당 모듈 화면을 열고 그 건의 상세 모달을 띄운다 */
+function gotoRoomTask(t) {
+  sessionStorage.setItem(`rsc_detail_${t.key}`, t.id);
+  window.location.hash = `#${t.key}`;
+}
+
+/** 호실에 업무가 여러 건이면 선택 모달을 띄운다 */
+function openRoomTasks(r) {
+  const rows = r.tasks.map((t, i) => `
+    <li class="recent-item room-task" data-idx="${i}">
+      <span class="recent-icon">${t.icon}</span>
+      <span class="recent-text">${escapeHtml(t.text)}</span>
+      <span class="room-task-go">›</span>
+    </li>`).join('');
+  openModal(`
+    <div class="detail-head"><h3>${escapeHtml(r.no)}호 · 오늘 업무 ${r.tasks.length}건</h3></div>
+    <ul class="recent-list">${rows}</ul>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-secondary" id="roomTasksClose">닫기</button>
+    </div>`, (modalEl) => {
+    modalEl.querySelector('#roomTasksClose').addEventListener('click', closeModal);
+    modalEl.querySelectorAll('.room-task').forEach((li) => {
+      li.addEventListener('click', () => {
+        closeModal();
+        gotoRoomTask(r.tasks[Number(li.dataset.idx)]);
+      });
+    });
+  });
 }
 
 /* ── 일일 업무 보고서: 인쇄 전용 화면을 만들고 브라우저 인쇄(PDF 저장)를 연다 ── */
