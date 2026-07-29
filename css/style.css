@@ -288,7 +288,9 @@ main#content {
 .data-table tbody tr:hover { background: var(--gold-bg); }
 .data-table tbody tr:last-child td { border-bottom: none; }
 
-.row-actions { display: flex; gap: 10px; }
+/* 주의: td 에 flex 를 주면 표 셀 높이가 틀어져 구분선이 어긋난다 (모바일 카드 뷰에서만 flex 사용) */
+.row-actions { white-space: nowrap; }
+.row-actions .btn-link + .btn-link { margin-left: 12px; }
 .btn-link { background: none; border: none; color: var(--primary); cursor: pointer; font-size: 13px; padding: 0; font-weight: 700; font-family: inherit; }
 .btn-link.danger { color: var(--red); }
 
