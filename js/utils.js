@@ -93,11 +93,11 @@ function debounce(fn, wait) {
 /* 차트 색상: 색각이상 검증(validate_palette)을 통과한 조합. 순서도 검증된 인접 순서 */
 const STATE_ORDER = ['green', 'blue', 'yellow', 'red', 'gray'];
 const STATE_COLORS = {
-  green: '#1f7d54',
-  blue: '#2b5aa0',
-  yellow: '#d19a06',
-  red: '#9c2b20',
-  gray: '#5d6b85',
+  green: '#2c9d6b',
+  blue: '#3d78c8',
+  yellow: '#e0a20a',
+  red: '#c94433',
+  gray: '#7787ad',
 };
 
 /* 모듈별 배지 상태 이름 (computeBadge 가 반환하는 badge-* 클래스 기준) */
