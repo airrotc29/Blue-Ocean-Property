@@ -78,6 +78,25 @@ function downloadFile(filename, content, mime) {
   URL.revokeObjectURL(url);
 }
 
+/** 이미지 파일 → 리사이즈된 dataURL (localStorage 저장용). PNG는 투명도 유지 */
+function fileToDataURL(file, maxW) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const scale = Math.min(1, (maxW || 1600) / img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(img.width * scale));
+      canvas.height = Math.max(1, Math.round(img.height * scale));
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      resolve(file.type === 'image/png' ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', 0.82));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('이미지 읽기 실패')); };
+    img.src = url;
+  });
+}
+
 function readFileAsText(file) {
   return new Promise((resolve, reject) => {
     const r = new FileReader();

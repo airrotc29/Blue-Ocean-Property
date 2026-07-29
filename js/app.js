@@ -45,6 +45,18 @@ function renderSettings(container) {
     </div>
     <div class="settings-grid">
       <div class="settings-card">
+        <h3>대시보드 배경 사진</h3>
+        <p>대시보드 상단 남색 배너의 배경으로 표시할 사진(호텔 전경 등)을 업로드합니다.</p>
+        <input type="file" id="heroImgInput" accept="image/*">
+        <button class="btn btn-secondary" id="heroImgClear">사진 제거</button>
+      </div>
+      <div class="settings-card">
+        <h3>회사 로고</h3>
+        <p>상단 헤더에 표시할 로고 이미지를 업로드합니다. (배경 투명 PNG 권장)</p>
+        <input type="file" id="logoImgInput" accept="image/*">
+        <button class="btn btn-secondary" id="logoImgClear">로고 제거</button>
+      </div>
+      <div class="settings-card">
         <h3>전체 데이터 백업</h3>
         <p>계약/입퇴실/민원/하자 데이터를 JSON 파일 하나로 내려받습니다.</p>
         <button class="btn btn-primary" id="backupBtn">백업 파일 다운로드</button>
@@ -66,6 +78,30 @@ function renderSettings(container) {
       </div>
     </div>
   `;
+
+  const bindImageSlot = (inputId, clearId, key, maxW, label) => {
+    container.querySelector(inputId).addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        const dataUrl = await fileToDataURL(file, maxW);
+        localStorage.setItem(key, dataUrl);
+        applyBrandLogo();
+        showToast(`${label}을(를) 저장했습니다. 대시보드에서 확인하세요.`);
+      } catch (err) {
+        console.error(err);
+        showToast(`${label} 저장에 실패했습니다. 더 작은 이미지로 시도해 주세요.`, 'error');
+      }
+      e.target.value = '';
+    });
+    container.querySelector(clearId).addEventListener('click', () => {
+      localStorage.removeItem(key);
+      applyBrandLogo();
+      showToast(`${label}을(를) 제거했습니다.`);
+    });
+  };
+  bindImageSlot('#heroImgInput', '#heroImgClear', 'rsc_img_hero', 1600, '배경 사진');
+  bindImageSlot('#logoImgInput', '#logoImgClear', 'rsc_img_logo', 512, '로고');
 
   container.querySelector('#backupBtn').addEventListener('click', () => {
     const payload = { exportedAt: nowISO(), data: {} };
@@ -198,8 +234,29 @@ function initNav() {
   });
 }
 
+let defaultBrandMarkHtml = '';
+
+/** 업로드한 로고가 있으면 헤더 마크를 교체, 없으면 기본 SVG 로 복원 */
+function applyBrandLogo() {
+  const mark = document.querySelector('.brand-mark');
+  if (!mark) return;
+  const data = localStorage.getItem('rsc_img_logo');
+  if (data) {
+    const img = document.createElement('img');
+    img.src = data;
+    img.alt = '회사 로고';
+    img.className = 'brand-logo-img';
+    mark.replaceChildren(img);
+  } else if (defaultBrandMarkHtml) {
+    mark.innerHTML = defaultBrandMarkHtml;
+  }
+}
+
 function init() {
   crudViews = MODULES.map((m) => createCrudView(m));
+  const mark = document.querySelector('.brand-mark');
+  if (mark) defaultBrandMarkHtml = mark.innerHTML;
+  applyBrandLogo();
   initNav();
   window.addEventListener('hashchange', renderRoute);
   renderRoute();

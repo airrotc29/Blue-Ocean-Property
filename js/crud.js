@@ -146,6 +146,14 @@ function createCrudView(config) {
       downloadFile(`${config.key}_${todayStr()}.csv`, csv, 'text/csv;charset=utf-8');
       showToast('CSV 파일을 내보냈습니다.');
     });
+    /* 행(또는 모바일 카드) 클릭 → 상세 보기. 버튼 클릭은 제외 */
+    container.querySelectorAll('.data-table tbody tr').forEach((tr) => {
+      tr.addEventListener('click', (e) => {
+        if (e.target.closest('button')) return;
+        const item = store.get(tr.dataset.id);
+        if (item) openDetail(item);
+      });
+    });
     container.querySelectorAll('.edit-btn').forEach((btn) => {
       btn.addEventListener('click', () => openForm(store.get(btn.dataset.id)));
     });
@@ -157,6 +165,57 @@ function createCrudView(config) {
           store.remove(btn.dataset.id);
           showToast('삭제되었습니다.');
           render(container);
+        }
+      });
+    });
+  }
+
+  /* 항목 클릭 시 전체 필드를 읽기 전용으로 보여주는 상세 모달 */
+  function openDetail(item) {
+    const badge = config.computeBadge ? config.computeBadge(item) : null;
+    const rows = config.fields.map((f) => {
+      let v = item[f.name];
+      if (f.type === 'number') v = formatNumber(v);
+      v = (v === undefined || v === null || v === '') ? '-' : String(v);
+      return `
+        <div class="detail-row${f.type === 'textarea' ? ' detail-row-full' : ''}">
+          <dt>${escapeHtml(f.label)}</dt>
+          <dd>${escapeHtml(v)}</dd>
+        </div>`;
+    }).join('');
+    const meta = [
+      item.createdAt ? `등록 ${formatDateTime(item.createdAt)}` : '',
+      item.updatedAt ? `수정 ${formatDateTime(item.updatedAt)}` : '',
+    ].filter(Boolean).join(' · ');
+
+    const html = `
+      <div class="detail-head">
+        <h3>${escapeHtml(config.shortTitle)} 상세</h3>
+        ${badge ? `<span class="badge ${badge.cls}">${escapeHtml(badge.text)}</span>` : ''}
+      </div>
+      <dl class="detail-grid">${rows}</dl>
+      ${meta ? `<p class="detail-meta">${escapeHtml(meta)}</p>` : ''}
+      <div class="modal-actions detail-actions">
+        <button type="button" class="btn btn-danger" id="detailDeleteBtn">삭제</button>
+        <span class="detail-actions-spacer"></span>
+        <button type="button" class="btn btn-secondary" id="detailCloseBtn">닫기</button>
+        <button type="button" class="btn btn-primary" id="detailEditBtn">수정</button>
+      </div>`;
+
+    openModal(html, (modalEl) => {
+      modalEl.querySelector('#detailCloseBtn').addEventListener('click', closeModal);
+      modalEl.querySelector('#detailEditBtn').addEventListener('click', () => {
+        closeModal();
+        openForm(item);
+      });
+      modalEl.querySelector('#detailDeleteBtn').addEventListener('click', () => {
+        const label = item[config.fields[0].name] || item.id;
+        if (confirm(`'${label}' 항목을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) {
+          store.remove(item.id);
+          showToast('삭제되었습니다.');
+          closeModal();
+          const container = document.getElementById('content');
+          if (container) render(container);
         }
       });
     });

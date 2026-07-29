@@ -103,6 +103,12 @@ function renderDashboard(container, crudViews) {
     });
   });
 
+  /* 설정에서 업로드한 배경 사진 적용 (없으면 assets/hero.jpg → 그라데이션 순) */
+  const heroData = localStorage.getItem('rsc_img_hero');
+  if (heroData) {
+    container.querySelector('.hero-media').style.backgroundImage = `url(${heroData})`;
+  }
+
   container.querySelector('#dailyReportBtn').addEventListener('click', () => openDailyReport(crudViews));
 
   /* 호실 타일 클릭 → 입퇴실관리에서 해당 호실 검색 */
