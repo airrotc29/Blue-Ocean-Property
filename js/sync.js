@@ -83,24 +83,23 @@ function setSyncStatusText(text) {
   if (el) el.textContent = text;
 }
 
-/** 클라우드에서 받아와서 원격이 더 최신이면 적용. 적용했으면 true */
+/** 클라우드에서 받아와 적용을 시도.
+    반환: 'applied'(적용됨) | 'no-remote'(클라우드에 데이터 없음) | 'local-newer'(이 기기가 더 최신) */
 async function syncPull(opts) {
   const cfg = getSyncConfig();
-  if (!cfg) return false;
+  if (!cfg) return 'no-remote';
   const file = await syncGetRemoteFile(cfg);
-  if (!file) {
-    if (!(opts && opts.quiet)) showToast('클라우드에 아직 데이터가 없습니다. "지금 올리기"를 먼저 해주세요.');
-    return false;
-  }
+  if (!file) return 'no-remote';
   const payload = JSON.parse(b64DecodeUtf8(String(file.content || '').replace(/\n/g, '')));
   const localMod = localStorage.getItem('rsc_last_modified') || '';
-  if ((payload.exportedAt || '') > localMod) {
+  const force = opts && opts.force;
+  if (force || (payload.exportedAt || '') > localMod) {
     applySyncPayload(payload);
     localStorage.setItem('rsc_last_modified', payload.exportedAt || nowISO());
     setSyncStatusText(`마지막 동기화(받음): ${formatDateTime(nowISO())}`);
-    return true;
+    return 'applied';
   }
-  return false;
+  return 'local-newer';
 }
 
 /** 현재 데이터를 클라우드에 업로드 (충돌 시 1회 재시도) */
@@ -137,13 +136,16 @@ function scheduleSyncPush() {
   }, 4000);
 }
 
-/** 앱 시작 시: 클라우드가 더 최신이면 받아와서 화면 갱신 */
-function syncOnStartup() {
-  if (!getSyncConfig()) return;
-  syncPull({ quiet: true }).then((changed) => {
-    if (changed) {
+/** 자동 받기: 앱 시작 시 + 화면에 다시 돌아올 때 클라우드가 더 최신이면 적용 */
+let syncPullInFlight = false;
+function syncAutoPull() {
+  if (!getSyncConfig() || syncPullInFlight) return;
+  syncPullInFlight = true;
+  syncPull({ quiet: true }).then((result) => {
+    if (result === 'applied') {
       renderRoute();
       showToast('다른 기기의 최신 데이터를 불러왔습니다.');
     }
-  }).catch((e) => console.error('동기화 실패', e));
+  }).catch((e) => console.error('동기화 실패', e))
+    .finally(() => { syncPullInFlight = false; });
 }

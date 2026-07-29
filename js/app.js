@@ -156,13 +156,22 @@ function renderSettings(container) {
     if (!getSyncConfig()) { showToast('먼저 저장·연결 확인을 해주세요.', 'error'); return; }
     statusEl.textContent = '받는 중...';
     try {
-      const changed = await syncPull();
-      if (changed) {
-        showToast('클라우드 데이터를 받아왔습니다.');
-      } else {
-        setSyncStatusText(`이미 최신입니다. (${formatDateTime(nowISO())} 확인)`);
-        showToast('이 기기의 데이터가 이미 최신입니다.');
+      let result = await syncPull();
+      if (result === 'no-remote') {
+        setSyncStatusText('클라우드에 아직 데이터가 없습니다.');
+        showToast('클라우드에 데이터가 없습니다. "지금 올리기"를 먼저 해주세요.', 'error');
+        return;
       }
+      if (result === 'local-newer') {
+        /* 이 기기 기록이 더 최신이어도, 사용자가 원하면 클라우드 데이터로 교체 */
+        if (confirm('이 기기의 데이터가 클라우드보다 최신으로 기록되어 있습니다.\n그래도 클라우드 데이터로 교체할까요?\n(이 기기에만 있는 내용은 사라집니다)')) {
+          result = await syncPull({ force: true });
+        } else {
+          setSyncStatusText(`받기 취소 (${formatDateTime(nowISO())})`);
+          return;
+        }
+      }
+      if (result === 'applied') showToast('클라우드 데이터를 받아왔습니다.');
     } catch (e) {
       console.error(e);
       setSyncStatusText('받기 실패 — 연결 상태를 확인해주세요.');
@@ -366,8 +375,11 @@ function init() {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
 
-  /* 클라우드 동기화: 앱을 열 때 최신 데이터 받아오기 */
-  syncOnStartup();
+  /* 클라우드 동기화: 앱을 열 때 + 화면으로 돌아올 때 최신 데이터 받아오기 */
+  syncAutoPull();
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) syncAutoPull();
+  });
 }
 
 document.addEventListener('DOMContentLoaded', init);
